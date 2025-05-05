@@ -1,19 +1,35 @@
-# class Book:
-#     def __init__(self, id, title, description):
-#         self.id = id
-#         self.title = title
-#         self.description = description
-
-# books = [
-#     Book(1, "Circe", "Circe is a 2018 mythic fantasy novel by American writer Madeline Miller. Set during the Greek Heroic Age, it is an adaptation of various Greek myths, most notably the Odyssey, as told from the perspective of the witch Circe."),
-#     Book(2, "Pride and Prejudice", "A classic novel by Jane Austen that tells the story of Elizabeth Bennet and her relationship with Mr. Darcy. It's a tale of love, social expectations, and personal growth."),
-#     Book(3, "The Name of the Wind", "The Name of the Wind, also referred to as The Kingkiller Chronicle: Day One, is a heroic fantasy novel written by American author Patrick Rothfuss.")
-# ]
-
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey
+from typing import Optional
 from ..db import db
 
 class Book(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str]
     description: Mapped[str]
+    author_id: Mapped[Optional[int]] = mapped_column(ForeignKey("author.id"))
+    author: Mapped[Optional["Author"]] = relationship(back_populates="books")
+
+    def to_dict(self):
+        book_as_dict = {}
+        book_as_dict["id"] = self.id
+        book_as_dict["title"] = self.title
+        book_as_dict["description"] = self.description
+
+        if self.author:
+            book_as_dict["author"] = self.author.name
+
+        return book_as_dict
+    
+    @classmethod
+    def from_dict(cls, book_data):
+        # Use get() to fetch values that could be undefined to avoid raising an error
+        author_id = book_data.get("author_id")
+
+        new_book = cls(
+            title=book_data["title"],
+            description=book_data["description"],
+            author_id=author_id
+        )
+
+        return new_book
